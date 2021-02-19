@@ -106,6 +106,7 @@ pid_t arch_fork(run_t* run) {
     }
     return pid;
 }
+#include <sys/ptrace.h>
 
 bool arch_launchChild(run_t* run) {
     /* Try to enable network namespacing */
@@ -157,12 +158,13 @@ bool arch_launchChild(run_t* run) {
     alarm(0);
 
     /* Wait for the ptrace to attach now */
-    if (kill(syscall(__NR_getpid), SIGSTOP) == -1) {
-        LOG_F("Couldn't stop itself");
-    }
+    //Suspend immediately after execve
+    ptrace(PTRACE_TRACEME, 0, 0, 0);
+
 #if defined(__NR_execveat)
     syscall(__NR_execveat, run->global->arch_linux.exeFd, "", run->args, environ, AT_EMPTY_PATH);
 #endif /* defined__NR_execveat) */
+    LOG_E("execve %s\n", run->args[0]);
     execve(run->args[0], (char* const*)run->args, environ);
     int errno_cpy = errno;
     alarm(1);
@@ -201,6 +203,12 @@ void arch_prepareParentAfterFork(run_t* run) {
     if (!arch_perfOpen(run)) {
         LOG_F("Couldn't open perf event for pid=%d", (int)run->pid);
     }
+
+    arch_honeybeeClose(run);
+    if (!arch_honeybeeOpen(run)) {
+        LOG_F("Couldn't open honeybee recorder for pid=%d", (int)run->pid);
+    }
+
     if (!arch_attachToNewPid(run)) {
         LOG_F("Couldn't attach to pid=%d", (int)run->pid);
     }
@@ -274,6 +282,7 @@ void arch_reapChild(run_t* run) {
     }
 
     arch_perfAnalyze(run);
+    arch_honeybeeAnalyze(run);
 }
 
 bool arch_archInit(honggfuzz_t* hfuzz) {
@@ -321,7 +330,8 @@ bool arch_archInit(honggfuzz_t* hfuzz) {
         break;
     }
 
-    if (hfuzz->feedback.dynFileMethod != _HF_DYNFILE_NONE) {
+    if (hfuzz->feedback.dynFileMethod != _HF_DYNFILE_NONE
+        && hfuzz->feedback.dynFileMethod != _HF_DYNFILE_IPT_EDGE) {
         unsigned long major = 0, minor = 0;
         char*         p = NULL;
 
@@ -369,6 +379,13 @@ bool arch_archInit(honggfuzz_t* hfuzz) {
             return false;
         }
     }
+
+    if (hfuzz->feedback.dynFileMethod != _HF_DYNFILE_IPT_EDGE) {
+        if (!arch_honeybeeInit(hfuzz)) {
+            return false;
+        }
+    }
+
 #if defined(__ANDROID__) && defined(__arm__) && defined(OPENSSL_ARMCAP_ABI)
     /*
      * For ARM kernels running Android API <= 21, if fuzzing target links to

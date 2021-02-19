@@ -26,7 +26,7 @@ LD = $(CC)
 BIN := honggfuzz
 HFUZZ_CC_BIN := hfuzz_cc/hfuzz-cc
 HFUZZ_CC_SRCS := hfuzz_cc/hfuzz-cc.c
-COMMON_CFLAGS := -std=c11 -I/usr/local/include -D_GNU_SOURCE -Wall -Wextra -Werror -Wno-format-truncation -Wno-override-init -I.
+COMMON_CFLAGS := -std=c11 -I/usr/local/include -D_GNU_SOURCE -Wall -Wextra -Wno-format-truncation -Wno-override-init -I.
 COMMON_LDFLAGS := -pthread -lm
 COMMON_SRCS := $(sort $(wildcard *.c))
 CFLAGS ?= -O3 -mtune=native -funroll-loops
@@ -43,9 +43,9 @@ KERNEL ?= $(shell uname -r)
 ifeq ($(OS)$(findstring Microsoft,$(KERNEL)),Linux) # matches Linux but excludes WSL (Windows Subsystem for Linux)
     ARCH := LINUX
 
-    ARCH_CFLAGS := -D_FILE_OFFSET_BITS=64
+    ARCH_CFLAGS := -D_FILE_OFFSET_BITS=64 -I../Honeybee
     ARCH_SRCS := $(sort $(wildcard linux/*.c))
-    ARCH_LDFLAGS := -L/usr/local/include
+    ARCH_LDFLAGS := -L/usr/local/include -L../Honeybee/cmake-build-debug -lhoney_analyzer
     ifeq ($(BUILD_OSSFUZZ_STATIC),true)
             ARCH_LDFLAGS += -Wl,-Bstatic \
                             `pkg-config --libs --static libunwind-ptrace libunwind-generic` \

@@ -885,6 +885,9 @@ bool arch_traceWaitForPidStop(pid_t pid) {
     }
 }
 
+#include <sys/ioctl.h>
+#include <linux/perf_event.h>
+
 #define MAX_THREAD_IN_TASK 4096
 bool arch_traceAttach(run_t* run) {
 /*
@@ -905,10 +908,10 @@ bool arch_traceAttach(run_t* run) {
         return false;
     }
 
-    if (ptrace(PTRACE_SEIZE, run->pid, NULL, seize_options) == -1) {
-        PLOG_W("Couldn't ptrace(PTRACE_SEIZE) to pid: %d", (int)run->pid);
-        return false;
-    }
+//    if (ptrace(PTRACE_SEIZE, run->pid, NULL, seize_options) == -1) {
+//        PLOG_W("Couldn't ptrace(PTRACE_SEIZE) to pid: %d", (int)run->pid);
+//        return false;
+//    }
 
     LOG_D("Attached to PID: %d", (int)run->pid);
 
@@ -928,6 +931,22 @@ bool arch_traceAttach(run_t* run) {
         }
         LOG_D("Attached to PID: %d (thread_group:%d)", tasks[i], run->pid);
     }
+
+        uint64_t executable_region_offset = 0x31000;
+
+//    char filter[PATH_MAX * 2];
+//    const char *trace_target = run->global->exe.cmdline[0];
+//
+//    snprintf(filter, sizeof filter, "filter 0x%zx/0x%zx@%s",
+//             executable_region_offset + 1, get_file_filter_size(trace_target), trace_target);
+//    LOG_E("Filter gen for pid %d = %s\n", run->pid, filter);
+    if (run->global->feedback.dynFileMethod & _HF_DYNFILE_IPT_BLOCK) {
+        int result = ioctl(run->arch_linux.cpuIptBtsFd, PERF_EVENT_IOC_SET_FILTER, "filter 0x7fffef408000/0x197a80@/home/allison/Downloads/HTMLFastParse/HTMLFastParseFuzzingCli/test.so");
+        if (result < 0) {
+            LOG_F("failed to set filterj %d\n", result);
+        }
+    }
+
 
     if (ptrace(PTRACE_CONT, run->pid, NULL, NULL) == -1) {
         PLOG_W("ptrace(PTRACE_CONT) to pid: %d", (int)run->pid);

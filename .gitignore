@@ -14,3 +14,4 @@ libs
 obj
 examples/badcode/targets/badcode1
 examples/badcode/targets/badcode2
+.idea/

@@ -51,6 +51,8 @@ static void report_printdynFileMethod(run_t* run) {
             dprintf(reportFD, "BTS_EDGE_COUNT ");
         if (run->global->feedback.dynFileMethod & _HF_DYNFILE_IPT_BLOCK)
             dprintf(reportFD, "IPT_BLOCK_COUNT ");
+        if (run->global->feedback.dynFileMethod & _HF_DYNFILE_IPT_EDGE)
+            dprintf(reportFD, "IPT_EDGE_COUNT ");
 
         dprintf(reportFD, "\n");
     }

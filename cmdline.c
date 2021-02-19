@@ -534,6 +534,7 @@ bool cmdlineParse(int argc, char* argv[], honggfuzz_t* hfuzz) {
         { { "linux_ns_net", required_argument, NULL, 0x0530 }, "Use Linux NET namespace isolation (yes/no/maybe [default:no])" },
         { { "linux_ns_pid", no_argument, NULL, 0x0531 }, "Use Linux PID namespace isolation" },
         { { "linux_ns_ipc", no_argument, NULL, 0x0532 }, "Use Linux IPC namespace isolation" },
+        { { "linux_honeybee_ipt_edge", no_argument, NULL, 0x533 }, "Use Intel Processor Trace via Honeybee to count unique edges (requires libhoneybee.so and the honeybee kernel module)" },
 #endif // defined(_HF_ARCH_LINUX)
 
 #if defined(_HF_ARCH_NETBSD)
@@ -764,6 +765,9 @@ bool cmdlineParse(int argc, char* argv[], honggfuzz_t* hfuzz) {
                 break;
             case 0x532:
                 hfuzz->arch_linux.cloneFlags |= (CLONE_NEWUSER | CLONE_NEWIPC);
+                break;
+            case 0x533:
+                hfuzz->feedback.dynFileMethod |= _HF_DYNFILE_IPT_EDGE;
                 break;
 #endif /* defined(_HF_ARCH_LINUX) */
 #if defined(_HF_ARCH_NETBSD)
