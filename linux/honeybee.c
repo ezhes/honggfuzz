@@ -38,11 +38,15 @@ bool arch_honeybeeInit(honggfuzz_t* hfuzz HF_ATTR_UNUSED) {
         return true;
     }
 
+    const char *hive_path = hfuzz->honeybee_config.hive_path;
+    if (!hive_path) {
+        LOG_F("No hive path provided!");
+    }
+
     //Init the global hive file
     if (!honeybee_global.global_hive) {
-        //FIXME: Get this from the command line
-        if (!(honeybee_global.global_hive = hb_hive_alloc("/tmp/test.hive"))) {
-            LOG_F("Unable to load hive file!");
+        if (!(honeybee_global.global_hive = hb_hive_alloc(hive_path))) {
+            LOG_F("Unable to load hive file! %s", hive_path);
         }
     }
 
@@ -100,18 +104,21 @@ bool arch_honeybeeOpen(run_t* run) {
         if ((result = ha_session_alloc(&tracer->analysis_session, honeybee_global.global_hive)) < 0) {
             LOG_F("Could not allocate analysis session. This is likely an out of memory error. Error=%d\n", result);
         }
-
         run->arch_linux.honeybeeTracer = tracer;
     }
 
     ha_capture_session_range_filter filters[4];
     bzero(&filters, sizeof(ha_capture_session_range_filter) * 4);
-    filters[0].enabled = 0x1;
-    filters[0].start = 0x0;
-    filters[0].stop = 0x7f0000000000; //canonical start address for shared libraries
-//    filters[0].start = 0x7ffff7f3a000;
-//    filters[0].stop = 0x7ffff7fce000;
 
+    uint64_t hive_filter_start = run->global->honeybee_config.range_start;
+    uint64_t hive_filter_stop = run->global->honeybee_config.range_stop;
+    if (hive_filter_start < hive_filter_stop) {
+        filters[0].start = hive_filter_start;
+        filters[0].stop = hive_filter_stop;
+        filters[0].enabled = 0x1;
+    } else {
+        LOG_F("Hive had invalid VIP range: %p -> %p", (void *)hive_filter_start, (void *)hive_filter_stop);
+    }
 
     if ((result = ha_capture_session_configure_tracing(tracer->capture_session, run->pid, filters)) < 0) {
         LOG_F("Could not configure tracing on cpu=%d, error=%d\n", run->fuzzNo, result);
@@ -145,8 +152,6 @@ static void process_block(ha_session_t session HF_ATTR_UNUSED, void *context, ui
     run_t* run = context;
     ip &= _HF_PERF_BITMAP_BITSZ_MASK;
 
-//    run->global
-//#error make this not atomic
     register bool prev = ATOMIC_BITMAP_SET(run->global->feedback.covFeedbackMap->bbMapPc, ip);
     if (!prev) {
         run->hwCnts.newBBCnt++;
@@ -182,7 +187,7 @@ void arch_honeybeeAnalyze(run_t* run) {
     if ((result = ha_session_reconfigure_with_terminated_trace_buffer(tracer->analysis_session,
                                                         trace_buffer,
                                                         trace_length,
-                                                        /*0x7ffff7f3a000*/0x00400000)) >= 0) {
+                                                        run->global->honeybee_config.range_start)) >= 0) {
         /* We were able to sync */
         if ((result = ha_session_decode(tracer->analysis_session, process_block, run)) < 0
             && result != -HA_PT_DECODER_END_OF_STREAM) {
@@ -190,7 +195,7 @@ void arch_honeybeeAnalyze(run_t* run) {
 //            fwrite(trace_buffer, trace_length, 1, f);
 //            fclose(f);
 
-//            LOG_E("ipt decode error on cpu=%d, error=%d\n", run->fuzzNo, result);
+            LOG_E("ipt decode error on cpu=%d, error=%d\n", run->fuzzNo, result);
         }
 
 //        LOG_E("len = %llu\n", trace_length);

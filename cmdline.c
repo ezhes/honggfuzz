@@ -534,7 +534,10 @@ bool cmdlineParse(int argc, char* argv[], honggfuzz_t* hfuzz) {
         { { "linux_ns_net", required_argument, NULL, 0x0530 }, "Use Linux NET namespace isolation (yes/no/maybe [default:no])" },
         { { "linux_ns_pid", no_argument, NULL, 0x0531 }, "Use Linux PID namespace isolation" },
         { { "linux_ns_ipc", no_argument, NULL, 0x0532 }, "Use Linux IPC namespace isolation" },
-        { { "linux_honeybee_ipt_edge", no_argument, NULL, 0x533 }, "Use Intel Processor Trace via Honeybee to count unique edges (requires libhoneybee.so and the honeybee kernel module)" },
+        { { "linux_honeybee_ipt_edge", no_argument, NULL, 0x533 }, "Use Intel Processor Trace via Honeybee to count unique edges (requires libhoneybee and the honeybee kernel module)" },
+        { { "honeybee_hive", required_argument, NULL, 0x534 }, "The path to the Hive file to use for analyzing fuzz targets" },
+        { { "honeybee_start_address", required_argument, NULL, 0x535 }, "The path to the Hive file to use for analyzing fuzz targets" },
+        { { "honeybee_stop_address", required_argument, NULL, 0x536 }, "The path to the Hive file to use for analyzing fuzz targets" },
 #endif // defined(_HF_ARCH_LINUX)
 
 #if defined(_HF_ARCH_NETBSD)
@@ -768,6 +771,15 @@ bool cmdlineParse(int argc, char* argv[], honggfuzz_t* hfuzz) {
                 break;
             case 0x533:
                 hfuzz->feedback.dynFileMethod |= _HF_DYNFILE_IPT_EDGE;
+                break;
+            case 0x534:
+                hfuzz->honeybee_config.hive_path = optarg;
+                break;
+            case 0x535:
+                hfuzz->honeybee_config.range_start = strtoull(optarg, NULL, 0);
+                break;
+            case 0x536:
+                hfuzz->honeybee_config.range_stop = strtoull(optarg, NULL, 0);;
                 break;
 #endif /* defined(_HF_ARCH_LINUX) */
 #if defined(_HF_ARCH_NETBSD)

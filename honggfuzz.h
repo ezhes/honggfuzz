@@ -337,6 +337,12 @@ typedef struct {
         char**      symsWl;
         size_t      symsWlCnt;
     } arch_netbsd;
+
+    struct {
+        const char *hive_path;
+        uint64_t range_start;
+        uint64_t range_stop;
+    } honeybee_config;
 } honggfuzz_t;
 
 typedef enum {
