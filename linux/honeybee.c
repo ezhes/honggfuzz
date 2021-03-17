@@ -12,7 +12,7 @@
 #include "libhfcommon/util.h"
 
 #include "honeybee.h"
-#include "/home/allison/Desktop/Honeybee/honey_analyzer/honey_analyzer.h"
+#include "../Honeybee/honey_analyzer/honey_analyzer.h"
 
 typedef struct {
     ha_capture_session_t capture_session;
